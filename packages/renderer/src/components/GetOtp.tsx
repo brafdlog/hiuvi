@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, FormControl, Modal } from 'react-bootstrap';
 import { observer } from 'mobx-react-lite';
-import { useConfigStore } from '/@/store/ConfigStore';
+import { useConfigStore } from '../store/ConfigStore';
 import { sendOTPResponse } from '#preload';
 
 const GetOtp = () => {

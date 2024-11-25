@@ -1,6 +1,7 @@
 import { StoresProvider } from '../store';
 import './App.css';
 import Body from './Body';
+import GetOtp from './GetOtp';
 import TopBar from './topBar/TopBar';
 
 function App() {
@@ -9,6 +10,7 @@ function App() {
       <div className="App">
         <TopBar />
         <Body />
+        <GetOtp />
       </div>
     </StoresProvider>
   );

@@ -1,25 +1,20 @@
-import { configFilePath, userDataPath } from '@/app-globals';
+import { userDataPath } from '@/app-globals';
 import {
   type AccountToScrapeConfig,
   type Config,
   type EnrichedTransaction,
-  type FinancialAccountDetails,
   type ScraperScrapingResult,
 } from '@/backend/commonTypes';
-import { getConfig } from '@/backend/configManager/configManager';
 import * as bankScraper from '@/backend/import/bankScraper';
 import Bottleneck from 'bottleneck';
 import { type Transaction } from 'israeli-bank-scrapers-core/lib/transactions';
-import _ from 'lodash';
 import moment from 'moment';
-// import * as categoryCalculation from '@/backend/import/categoryCalculationScript';
 import {
   AccountStatus,
-  BudgetTrackingEventEmitter,
   DownalodChromeEvent,
   EventNames,
-  ImporterEvent,
   type EventPublisher,
+  ImporterEvent,
 } from '../eventEmitters/EventEmitter';
 import { calculateTransactionHash } from '../transactions/transactions';
 import getChrome from './downloadChromium';
@@ -97,26 +92,6 @@ function emitChromeDownload(eventPublisher: EventPublisher, percent: number) {
   eventPublisher.emit(EventNames.DOWNLOAD_CHROME, new DownalodChromeEvent(percent));
 }
 
-export async function getFinancialAccountDetails(): Promise<FinancialAccountDetails[]> {
-  const config = await getConfig(configFilePath);
-  const eventEmitter = new BudgetTrackingEventEmitter();
-
-  const startDate = moment().subtract(30, 'days').startOf('day').toDate();
-
-  const companyIdToTransactions = await scrapeFinancialAccountsAndFetchTransactions(
-    config.scraping,
-    startDate,
-    eventEmitter,
-  );
-  const financialAccountDetails: { name: string; accountNumber: string }[] = [];
-  Object.keys(companyIdToTransactions).forEach((companyId) => {
-    let accountNumbers = companyIdToTransactions[companyId].map((transaction) => transaction.accountNumber);
-    accountNumbers = _.uniq(accountNumbers);
-    accountNumbers.forEach((accountNumber) => financialAccountDetails.push({ name: companyId, accountNumber }));
-  });
-  return financialAccountDetails;
-}
-
 async function fetchTransactions(
   account: AccountToScrapeConfig,
   startDate: Date,
@@ -142,6 +117,7 @@ async function fetchTransactions(
       },
       emitImporterProgressEvent,
       chromePath,
+      eventPublisher,
     );
     if (!scrapeResult.success) {
       throw new Error(`${scrapeResult.errorType}: ${scrapeResult.errorMessage}`);
@@ -193,14 +169,12 @@ async function postProcessTransactions(
 
 function enrichTransaction(transaction: Transaction, companyId: string, accountNumber: string): EnrichedTransaction {
   const hash = calculateTransactionHash(transaction, companyId, accountNumber);
-  // const category = categoryCalculation.getCategoryNameByTransactionDescription(transaction.description);
-  const enrichedTransaction: EnrichedTransaction = {
+  return {
     ...transaction,
     accountNumber,
     // category,
     hash,
   };
-  return enrichedTransaction;
 }
 
 function transactionsDateComparator(t1: Transaction, t2: Transaction) {

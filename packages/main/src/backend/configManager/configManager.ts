@@ -4,6 +4,7 @@ import { decrypt, encrypt } from '@/backend/configManager/encryption/crypto';
 import { existsSync, promises as fs } from 'fs';
 import configExample from './defaultConfig';
 import logger from '/@/logging/logger';
+import type { CompanyTypes } from 'israeli-bank-scrapers-core';
 
 export async function getConfig(configPath: string = configFilePath): Promise<Config> {
   const configFromFile = await getConfigFromFile(configPath);
@@ -33,6 +34,23 @@ export async function updateConfig(configPath: string, configToUpdate: Config): 
   const stringifiedConfig = JSON.stringify(configToUpdate, null, 2);
   const encryptedConfigStr = await encrypt(stringifiedConfig);
   await fs.writeFile(configPath, encryptedConfigStr);
+}
+
+export async function updateOtpLongTermToken(
+  key: CompanyTypes,
+  otpLongTermToken: string,
+  configPath: string = configFilePath,
+): Promise<void> {
+  const config = await getConfig(configPath);
+  const account = config.scraping.accountsToScrape.find((acc) => acc.key === key) as {
+    loginFields: { otpLongTermToken: string };
+  };
+  if (account) {
+    account.loginFields.otpLongTermToken = otpLongTermToken;
+    await updateConfig(configPath, config);
+  } else {
+    throw new Error(`Account with key ${key} not found`);
+  }
 }
 
 async function getConfigFromFile(configPath: string) {
